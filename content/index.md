@@ -1,5 +1,5 @@
 ---
-title: Welcome to Quartz
+title: indexing page
 ---
 
-This is a blank Quartz installation.
+WIP
