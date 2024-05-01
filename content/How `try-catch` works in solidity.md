@@ -1,15 +1,15 @@
 ---
-tags:
-  - solidity
+title: "How `try-catch` works in solidity"
+tags: solidity
 ---
 
 `try-catch` 是一般 programming language 常見的錯誤處理機制，可以用來捕捉錯誤並進行處理，但是在 evm 這個設計之下出現了一些怪異的行為。要知道 `try-catch` 如何運作，首先需要知道錯誤如何傳遞出來。
 
 ## opcode overview - `revert`
 
-將當前的 execution 停下，並從 memory region 取出一段資料作為 context 的回傳值。
+作為錯誤處理最主要的 opcode，作用是將當前的 execution 停下，並從 memory region 取出一段資料作為 context 的回傳值。
 
-```sol
+```solidity
 assembly {
     revert(offset, size)
 }
@@ -19,7 +19,7 @@ assembly {
 
 最為常見的錯誤處理，只要提供的條件判斷為 false，就會將 reason string 作為錯誤拋出。而 reason string 不是以 `String` 型別拋出，是以 `Error(String)` 型別拋出。
 
-```sol
+```solidity
 require(condition, "reason string")
 ```
 
@@ -40,11 +40,13 @@ require(condition, "reason string")
 
 `revert` 處理 reason string 的編譯結果和 memory layout 與 `require` 處理 reason string 基本相同，所以以 Custom Error 為例。
 
-```sol
+```solidity
 // revert with custom error
 error CustomError(string, uint256);
 if (condition) revert CustomError("Oops!", 5);
+```
 
+```txt
 // 編譯後為 `revert(offset, size)`
 // memory layout
 [ptr]   : 0x....       // error selector of CustomError();
@@ -79,7 +81,7 @@ Solidity compiler 會在一些情況下將錯誤以 panic 的方式處理，這�
 
 Solidity compiler 有內建簡易的[形式化驗證的工具](https://docs.soliditylang.org/en/v0.8.24/smtchecker.html)，可以對一些簡單的行為做形式化驗證。不建議使用，要做形式化驗證可以找更專業的工具。在 Foundry 可以修改設定來啟用：
 
-```sol
+```solidity
 // FV.sol
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.13;
@@ -133,11 +135,11 @@ Info (1391): CHC: 2 verification condition(s) proved safe! Enable the model chec
 
 ## `try-catch`
 
-總結一下會被拋出的錯誤有：`Error(string)`, `Panic(uint256)`, `error CustomError()`。再來回來看 `try-catch` 的行為。
+總結一下會被拋出的錯誤有：`Error(string)`, `Panic(uint256)`, `error CustomError()`。
 
-首先，`try` 這個關鍵字後面只能接「external function 的呼叫」或是「透過 `new` 關鍵字去建立一個新的合約」
+再來回來看 `try-catch` 的行為。首先，`try` 這個關鍵字後面只能接「external function 的呼叫」或是「透過 `new` 關鍵字去建立一個新的合約」
 
-```sol
+```solidity
 // external function call
 address private _addr;
 try IERC20(_addr).transfer(from, to, amount) returns (bool) {
@@ -150,9 +152,9 @@ try new ERC20("sample", "SMT") returns (ERC20 erc20) {
 }
 ```
 
-接著 `catch` 關鍵字的後面要由拋出錯誤的資訊並在之後的 block 中處理。一個用來捕捉 `Error(string)`，另一個用來捕捉 `Panic(uint256)`
+接著 `catch` 關鍵字後面會附上錯誤資訊的型別並將資料做 abi decode，之後由後面的邏輯處理。以下為例，一個用來捕捉 `Error(string)`，另一個用來捕捉 `Panic(uint256)`：
 
-```sol
+```solidity
 address private _addr;
 try IERC20(_addr).transfer(from, to, amount) returns (bool) {
     ...
@@ -163,18 +165,18 @@ try IERC20(_addr).transfer(from, to, amount) returns (bool) {
 }
 ```
 
-奇怪的地方來了，`catch` 沒有支援捕捉 custom error
+而 `catch` 沒有支援捕捉 custom error
 
-```sol
-❌
+```solidity
+// ❌
 catch CustomError() {
     ...
 }
 ```
 
-如果拋出的錯誤不是 `Error(string)` 或是 `Panic(uint256)`，可以寫一個 default catch 做捕捉。[官方文件的寫法](https://docs.soliditylang.org/en/v0.8.24/control-structures.html#try-catch)會讓你以為兩種寫法是可以同時存在的，但是 default catch 只能有一個。這兩種寫法的差異只在於需不需要錯誤的資訊而已。被遺忘的 Custom Error 則會在這裡以 `bytes memory` 的型別被捕捉。
+如果拋出的錯誤不是 `Error(string)` 或是 `Panic(uint256)`，可以寫一個 default catch 做捕捉。[官方文件的寫法](https://docs.soliditylang.org/en/v0.8.24/control-structures.html#try-catch)會讓你以為兩種寫法是可以同時存在的，但是 default catch 只能有一個。**這兩種寫法的差異只在於需不需要錯誤的資訊而已**。被遺忘的 Custom Error 則可以在 `catch (bytes memory)` 以 `bytes memory` 型別被捕捉：
 
-```sol
+```solidity
 address private _addr;
 try IERC20(_addr).transfer(from, to, amount) returns (bool) {
     ...
@@ -189,7 +191,7 @@ try IERC20(_addr).transfer(from, to, amount) returns (bool) {
 
 **or**
 
-```sol
+```solidity
 address private _addr;
 try IERC20(_addr).transfer(from, to, amount) returns (bool) {
     ...
@@ -202,33 +204,94 @@ try IERC20(_addr).transfer(from, to, amount) returns (bool) {
 }
 ```
 
-## `try-catch` Cons
+## `try-catch` disadvantage
 
-### decode error
+try-catch 不好用的原因之一：沒有辦法捕捉 custom error 前面已經提過了；另外一個原因就是就算用了 try-catch 也還是有捕捉不了的錯誤。這種特性讓 try-catch 不能去捕捉處理「任意合約的錯誤」，只能用在「已被信任的合約」上。
 
-`revert` opcode 會從 memory region 取出來的資料作為錯誤資訊拋出，到 `try-catch` 時會去做 decode，如果 decode 出現錯誤，則不會被捕捉到。
+### reason 1: decode issue
 
-以下範例以會回傳 `cat` 作為錯誤資訊，現在將回傳的資訊裁掉一部分讓 `try-catch` 沒有辦法 decode，
+先前提到 `try-catch` 會對 revert 回傳的資料做 abi decode，但是 decode 的過程中發生錯誤時，錯誤反而不會被捕捉。
 
-```sol
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+以下合約會以 `"cat"` 作為錯誤資訊。`isCorrectLen` 會調整 revert 回傳的資料長度，正確的回傳長度為 71(0x47)，長度小於 71 則會使 abi decode 發生錯誤。
 
-import "forge-std/Test.sol";
+```txt
+// memory layout, total len = 0x04 + 0x20 + 0x20 + 0x03
 
+[0x40]: 0x8c379a0      | error selector of `Error(string)`, len = 0x04
+[0x60]: 0x20           | string offset, len = 0x20
+[0x80]: 0x03           | string length, len = 0x20
+[0xa0]: 'cat'          | string data, len = 0x03
+```
+
+```solidity
 contract Emit {
-    function revv(uint256 id) external pure {
-        // [0x40] 0x0000..error selector
-        // [0x60] string offset
-        // [0x80] string length
-        // [0x100] 'cat'
+    function revv(bool isCorrectLen) external {
+        uint256 len = isCorrectLen ? 0x47 : 0x44;
+
         assembly {
             let ptr := 0x40
-            mstore(ptr, 0x08c379a0) // error selector of `Error(string)`
-            mstore(add(ptr, 0x20), 0x20) // string offset
+            mstore(ptr, 0x08c379a0)          // error selector of `Error(string)`
+            mstore(add(ptr, 0x20), 0x20)     // string offset
             mstore(add(ptr, 0x43), 0x636174) // 'cat'
-            mstore(add(ptr, 0x40), 0x3) // string length = 3
-            revert(add(ptr, 0x1c), 0x63)
+            mstore(add(ptr, 0x40), 0x3)      // string length = 3
+            revert(add(ptr, 0x1c), len)
+        }
+    }
+}
+```
+
+測試和 log 如下，因為 abi decode 出現錯誤，所以只能以 `bytes memory` 的型別被捕捉。
+
+```solidity
+contract Catcherrr {
+    Emit private immutable emitter;
+
+    constructor() {
+        emitter = new Emit();
+    }
+
+    function test_cat() external {
+        try emitter.revv(false) {
+            console.log("call success");
+        } catch Error(string memory reason) {
+            console.logString(reason);
+        } catch (bytes memory err) {
+            console.logBytes(err);
+        }
+        console.log("error had been caught");
+    }
+}
+```
+
+```txt
+[PASS] test_cat() (gas: 7805)
+Logs:
+  0x08c379a000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000003
+  error had been catched
+
+Traces:
+  [7805] Catcherrr::test_cat()
+    ├─ [357] Emit::revv(false)
+    │   └─ ← [Revert]
+    ├─ [0] console::logBytes(0x08c379a000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000003) [staticcall]
+    │   └─ ← [Stop]
+    ├─ [0] console::log("error had been catched") [staticcall]
+    │   └─ ← [Stop]
+    └─ ← [Stop]
+```
+
+### return bomb
+
+return bomb 也是一個有趣的議題。在 abi decode 之前，需要將 revert 回傳的資料儲存在 memory region 裡面，而存取超出當前 memory region 範圍的資料時，則會觸發 memory expansion 去擴展 memory region 的範圍。memory expansion 是需要消耗 gas，如果 revert 回傳的資料過於龐大，則會消耗掉大量的 gas 並讓交易 revert 掉。所以如果要嘗試去捕捉任意合約發出來的錯誤，是有可能捕捉到一顆 gas bomb 的。
+
+以下為例：
+
+```solidity
+contract Emit {
+    function revv2() external {
+        uint256 max = type(uint256).max;
+        assembly {
+            revert(0x00, max)
         }
     }
 }
@@ -240,36 +303,27 @@ contract Catcherrr {
         emitter = new Emit();
     }
 
-    function test_cat() external {
-        try emitter.revv(0) {
+    function test_rev2() external {
+        try emitter.revv2() {
             console.log("call success");
-        } catch Error(string memory reason) {
-            console.logString(reason);
+        } catch (bytes memory err) {
+            console.logBytes(err);
         }
-        console.log("error had been catched");
     }
 }
 ```
 
-從 log 可以看到 `error had been catched` 沒有被印出來，`try-catch` 捕捉不到錯誤。
-
-```
-Running 1 test for src/RetDecodeF.sol:Catcherrr
-[FAIL. Reason: ] test_cat() (gas: 3445)
-Traces:
-  [3445] Catcherrr::test_cat()
-    ├─ [241] Emit::revv(0) [staticcall]
-    │   └─ ←
-    └─ ←
-
-Test result: FAILED. 0 passed; 1 failed; 0 skipped; finished in 5.66ms
-```
-
 ## conclusion
 
-現在越來越多的合約都轉向使用 Custom Error 來節省 gas 開銷，只能針對 external function 又沒辦法完全捕捉 Custom Error 的 `try-catch` 還是少用比較好。
+回顧一下 `try-catch` 做了什麼事：
+
+1. 呼叫外部合約
+2. 將回傳的資料存入 memory region (可能是 success 或是 revert)
+3. 將資料 decode 之後由 try block 或是 catch block 處理
+
+現在越來越多的合約都轉向使用 Custom Error 來節省 gas 開銷，只能針對 external function 又沒辦法完全捕捉 Custom Error 的 `try-catch` 用起來就不是那麼方便。又因為 decode issue 等等限制，只能用於「被信任的合約」上。
 
 ## reference
 
-- https://twitter.com/_prestwich/status/1516621028998275076
 - https://twitter.com/transmissions11/status/1516621010270769162
+- https://twitter.com/0xkarmacoma/status/1763746082537017725
