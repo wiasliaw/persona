@@ -79,7 +79,7 @@ Solidity compiler 會在一些情況下將錯誤以 panic 的方式處理，這�
 
 ### invariants
 
-Solidity compiler 有內建簡易的[形式化驗證的工具](https://docs.soliditylang.org/en/v0.8.24/smtchecker.html)，可以對一些簡單的行為做形式化驗證。不建議使用，要做形式化驗證可以找更專業的工具。在 Foundry 可以修改設定來啟用：
+Solidity compiler 有內建簡易的[[ctx_foundry_fv_model_checker|形式化驗證的工具]]，可以對一些簡單的行為做形式化驗證。不建議使用，要做形式化驗證可以找更專業的工具。在 Foundry 可以修改設定來啟用：
 
 ```solidity
 // FV.sol
