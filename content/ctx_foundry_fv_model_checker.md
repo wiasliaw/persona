@@ -97,7 +97,8 @@ targets = ["assert", "underflow", "overflow"]
 ```
 
 Log 如下：
-```txt
+
+```console
 Warning (6328): CHC: Assertion violation happens here.
 Counterexample:
 
