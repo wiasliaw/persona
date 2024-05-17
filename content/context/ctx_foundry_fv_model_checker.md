@@ -1,7 +1,6 @@
 ---
 title: "[context] enable formal verification in foundry"
 tags:
-  - context
   - foundry
 ---
 

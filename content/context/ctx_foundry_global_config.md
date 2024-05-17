@@ -1,7 +1,6 @@
 ---
 title: "[context] foundry global config"
 tags:
-  - context
   - foundry
 ---
 Foundry 的設定檔分為 project level 和 global level，可以將一些設定放到 global config 裡面，以避免重複設定

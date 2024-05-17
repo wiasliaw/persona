@@ -1,7 +1,6 @@
 ---
 title: "[context] nix installation"
 tags:
-  - context
   - nix
 ---
 

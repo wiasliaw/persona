@@ -1,7 +1,6 @@
 ---
 title: "[context] nix uninstallation"
 tags:
-  - context
   - nix
 ---
 

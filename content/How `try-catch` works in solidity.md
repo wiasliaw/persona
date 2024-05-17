@@ -98,14 +98,14 @@ contract ErrorEmittor {
 ```solidity
 import "forge-std/Test.sol";
 import {ErrorEmittor} from "../src/ErrorEmittor.sol";
- 
+
 contract ErrorCatcher {
     ErrorEmittor private _instance;
- 
+
     function setUp() external {
         _instance = new ErrorEmittor();
     }
- 
+
     function test_catch_panic() external view {
         // call success
         try _instance.emitPanic(10, 2) returns (uint256 c) {
@@ -128,7 +128,7 @@ contract ErrorCatcher {
 Logs:
   get the result: 5
   get the panicCode: 0x12
- 
+
 Traces:
   [10256] ErrorCatcher::test_catch_panic()
     ├─ [342] ErrorEmittor::emitPanic(10, 2) [staticcall]
@@ -308,13 +308,13 @@ contract PlasticBombs {
         }
     }
 }
- 
+
 contract Trigger {
     PlasticBombs private _bombs = new PlasticBombs();
- 
+
     event LogCase1(bytes);
     event LogCase2();
- 
+
     function tryCase1() external {
         try _bombs.bomb() {
             // unreachable
@@ -323,7 +323,7 @@ contract Trigger {
             emit LogCase1(data);
         }
     }
- 
+
     function tryCase2() external {
         try _bombs.bomb() {
             // unreachable
@@ -340,13 +340,13 @@ contract Trigger {
 ```solidity
 contract TestAnother is Test {
     Trigger private _instance = new Trigger();
- 
+
     function test_case1() external {
         // hardcode the gas
         (bool succ,) = address(_instance).call{gas: 100_000}(abi.encodeCall(Trigger.tryCase1, ()));
         assertTrue(succ);
     }
- 
+
     function test_case2() external {
         // hardcode the gas
         (bool succ,) = address(_instance).call{gas: 100_000}(abi.encodeCall(Trigger.tryCase2, ()));
@@ -354,28 +354,29 @@ contract TestAnother is Test {
     }
 }
 ```
+
 ```console
 [FAIL. Reason: assertion failed] test_case1() (gas: 108189)
 Traces:
   [108189] TestAnother::test_case1()
     ├─ [100000] Trigger::tryCase1()
     │   ├─ [14446] PlasticBombs::bomb()
-    │   │   └─ ← [Revert] 
+    │   │   └─ ← [Revert]
     │   └─ ← [OutOfGas] EvmError: OutOfGas
     ├─ [0] VM::assertTrue(false) [staticcall]
     │   └─ ← [Revert] assertion failed
     └─ ← [Revert] assertion failed
- 
+
 [PASS] test_case2() (gas: 28600)
 Traces:
   [28600] TestAnother::test_case2()
     ├─ [20341] Trigger::tryCase2()
     │   ├─ [14446] PlasticBombs::bomb()
-    │   │   └─ ← [Revert] 
+    │   │   └─ ← [Revert]
     │   ├─ emit LogCase2()
-    │   └─ ← [Stop] 
+    │   └─ ← [Stop]
     ├─ [0] VM::assertTrue(true) [staticcall]
-    │   └─ ← [Return] 
+    │   └─ ← [Return]
     └─ ← [Stop]
 ```
 
@@ -393,7 +394,7 @@ Traces:
 
 如果只是單純不要讓交易 revert，這樣寫 `try Call() catch {}` 是可行的，不需要處理 revert 回傳的資料，就不會有 returndatacopy 造成 return bomb。但是如果要處理 revert 回傳的資料，請用在**可信任的合約**或是**在 protocol 內部做錯誤處理**。
 
-## reference
+## Reference
 
 - https://twitter.com/transmissions11/status/1516621010270769162
 - https://twitter.com/0xkarmacoma/status/1763746082537017725
