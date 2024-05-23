@@ -183,9 +183,9 @@ catch CustomError() {
 }
 ```
 
-如果拋出的錯誤不是 `Error(string)` 或是 `Panic(uint256)`，可以寫一個 default catch 做捕捉。default catch 有兩種寫法：`catch (bytes memory data) {...}` 和 `catch {...}`。[官方文件的寫法](https://docs.soliditylang.org/en/v0.8.24/control-structures.html#try-catch)會讓你以為兩種寫法是可以同時存在的，但是 default catch 只能有一個。**這兩種寫法的差異只在於需不需要錯誤的資訊而已**。
+如果拋出的錯誤不是 `Error(string)` 或是 `Panic(uint256)`，可以寫一個 default catch 做捕捉。default catch 有兩種寫法：`catch (bytes memory data) {...}` 和 `catch {...}`。**這兩種寫法的差異只在於需不需要錯誤的資訊而已**。
 
-被遺忘的 Custom Error 則可以在 `catch (bytes memory){}` 中以 `bytes memory` 型別被捕捉，開發者可以自行做 abi decode 處理：
+被遺忘的 Custom Error 則可以在 `catch (bytes memory){}` 中以 `bytes memory` 型別被捕捉，開發者可以自行做 abi decode 處理，以下為 try catch 的整體結構：
 
 ```solidity
 address private _addr;
