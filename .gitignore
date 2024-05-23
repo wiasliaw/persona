@@ -3,3 +3,4 @@ quartz/.quartz-cache/
 public/
 content/.obsidian/
 content/.trash/
+.DS_Store
